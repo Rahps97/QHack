@@ -32,6 +32,43 @@ def natural_gradient(params):
     natural_grad = np.zeros(6)
 
     # QHACK #
+    gradient = np.zeros([6], dtype=np.float64)
+    F = np.zeros([6, 6], dtype=np.float64)
+    
+    def parameter_shift_term(qnode, params, i):
+        shifted = params.copy()
+        shifted[i] += np.pi/2
+        forward = qnode(shifted)  # forward evaluation
+        shifted[i] -= np.pi
+        backward = qnode(shifted) # backward evaluation
+        gradient = 0.5 * (forward - backward)
+        return gradient
+
+    for i in range(len(params)):
+            gradient[i] = parameter_shift_term(qnode, params, i)
+            
+    print(gradient)
+            
+    def parameter_shift_term_F(qnode, params, i, j):
+        shifted = params.copy()
+        shifted[i] += np.pi/2
+        shifted[j] += np.pi/2
+        first = qnode(shifted)  # 1st evaluation
+        shifted[i] -= np.pi
+        second = qnode(shifted) # 2nd evaluation
+        shifted[i] += np.pi
+        shifted[j] -= np.pi
+        third = qnode(shifted) # 3rd evaluation
+        shifted[i] -= np.pi
+        fourth = qnode(shifted) # 4th evaluation
+        
+        return -0.125 * (first -second -third +fourth)
+
+    for i in range(len(params)):
+        for j in range(len(params)):
+            F[i,j] = parameter_shift_term_F(qnode, params, i, j)    
+
+    natural_grad = np.dot(np.linalg.inv(F),gradient)
 
     # QHACK #
 
